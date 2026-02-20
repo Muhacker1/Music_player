@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Music Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --accent: #a855f7;
+            --accent-dark: #7e22ce;
+        }
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .active-tab {
+            color: var(--accent);
+            border-left: 4px solid var(--accent);
+            background: rgba(168, 85, 247, 0.1);
+        }
+        .track-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+        .vibrant-glow {
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+        }
+        input[type="range"] {
+            accent-color: var(--accent);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <!-- Main Container -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 glass flex flex-col border-r border-slate-800">
+            <div class="p-6">
+                <h1 class="text-2xl font-bold flex items-center gap-2">
+                    <span class="text-purple-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    </span>
+                    Vibe
+                </h1>
+            </div>
+
+            <nav class="flex-1 space-y-1">
+                <button onclick="setView('songs')" id="nav-songs" class="w-full text-left px-6 py-3 flex items-center gap-3 transition-all active-tab">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    Songs
+                </button>
+                <button onclick="setView('albums')" id="nav-albums" class="w-full text-left px-6 py-3 flex items-center gap-3 transition-all text-slate-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="12" cy="12" r="3"/></svg>
+                    Albums
+                </button>
+                <button onclick="setView('artists')" id="nav-artists" class="w-full text-left px-6 py-3 flex items-center gap-3 transition-all text-slate-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Artists
+                </button>
+                
+                <div class="px-6 py-4 mt-4">
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Playlists</p>
+                    <div id="playlist-list" class="mt-4 space-y-2">
+                        <!-- Playlists rendered here -->
+                    </div>
+                    <button onclick="createPlaylist()" class="mt-4 text-sm text-purple-400 hover:text-purple-300 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        New Playlist
+                    </button>
+                </div>
+            </nav>
+
+            <!-- File Upload Simulation -->
+            <div class="p-6">
+                <label class="block w-full text-center bg-slate-800 hover:bg-slate-700 text-xs font-medium py-2 rounded-lg cursor-pointer transition-colors border border-slate-700">
+                    IMPORT LOCAL FILES
+                    <input type="file" class="hidden" multiple accept="audio/*" onchange="handleFileUpload(event)">
+                </label>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col bg-slate-950 overflow-hidden">
+            <!-- Header/Search -->
+            <header class="p-6 flex items-center justify-between">
+                <div class="relative w-96">
+                    <input type="text" placeholder="Search your library..." class="w-full bg-slate-900 border border-slate-800 rounded-full py-2 px-10 focus:outline-none focus:border-purple-500 transition-all text-sm">
+                    <svg class="absolute left-3 top-2.5 text-slate-500" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                <div id="view-title" class="text-xl font-bold text-slate-200">All Songs</div>
+            </header>
+
+            <!-- Scrollable Content -->
+            <div id="content-container" class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                <!-- Dynamic Content Injection -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Player Bar -->
+    <footer class="h-24 glass border-t border-slate-800 flex items-center px-6 relative z-10">
+        <!-- Track Info -->
+        <div class="w-1/3 flex items-center gap-4">
+            <div id="player-art" class="w-14 h-14 bg-slate-800 rounded-lg vibrant-glow flex items-center justify-center overflow-hidden">
+                <svg class="text-slate-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            </div>
+            <div>
+                <div id="player-title" class="font-bold text-slate-100 truncate w-48">No track selected</div>
+                <div id="player-artist" class="text-xs text-slate-400 truncate w-48">Select a song to start vibing</div>
+            </div>
+        </div>
+
+        <!-- Player Controls -->
+        <div class="w-1/3 flex flex-col items-center gap-2">
+            <div class="flex items-center gap-6">
+                <button onclick="prevTrack()" class="text-slate-400 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+                </button>
+                <button onclick="togglePlay()" id="play-btn" class="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-transform">
+                    <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </button>
+                <button onclick="nextTrack()" class="text-slate-400 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+                </button>
+            </div>
+            <div class="w-full flex items-center gap-3">
+                <span id="curr-time" class="text-[10px] text-slate-500 w-8 text-right font-mono">0:00</span>
+                <input type="range" id="progress-bar" value="0" step="0.1" class="flex-1 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                <span id="total-time" class="text-[10px] text-slate-500 w-8 font-mono">0:00</span>
+            </div>
+        </div>
+
+        <!-- Volume & Extras -->
+        <div class="w-1/3 flex justify-end items-center gap-4">
+            <svg class="text-slate-500" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            <input type="range" class="w-24 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+        </div>
+    </footer>
+
+    <!-- Hidden Audio Element -->
+    <audio id="audio-engine"></audio>
+
+    <script>
+        // --- DATA STATE ---
+        let songs = [
+            { id: 1, title: "Midnight City", artist: "M83", album: "Hurry Up, We're Dreaming", duration: "4:03", color: "from-purple-500 to-blue-500" },
+            { id: 2, title: "Starboy", artist: "The Weeknd", album: "Starboy", duration: "3:50", color: "from-red-600 to-purple-600" },
+            { id: 3, title: "Levitating", artist: "Dua Lipa", album: "Future Nostalgia", duration: "3:23", color: "from-blue-400 to-cyan-500" },
+            { id: 4, title: "Blinding Lights", artist: "The Weeknd", album: "After Hours", duration: "3:20", color: "from-orange-500 to-red-600" },
+            { id: 5, title: "Deja Vu", artist: "Olivia Rodrigo", album: "SOUR", duration: "3:35", color: "from-indigo-500 to-purple-500" },
+            { id: 6, title: "As It Was", artist: "Harry Styles", album: "Harry's House", duration: "2:47", color: "from-yellow-500 to-orange-400" }
+        ];
+
+        let playlists = [
+            { id: 101, name: "Chill Vibes", tracks: [1, 3, 5] },
+            { id: 102, name: "Late Night Drive", tracks: [2, 4, 6] }
+        ];
+
+        let currentTrackIndex = -1;
+        let isPlaying = false;
+        let currentView = 'songs';
+
+        // --- ELEMENTS ---
+        const audio = document.getElementById('audio-engine');
+        const playBtn = document.getElementById('play-btn');
+        const playIcon = document.getElementById('play-icon');
+        const progressBar = document.getElementById('progress-bar');
+        const currTimeLabel = document.getElementById('curr-time');
+        const totalTimeLabel = document.getElementById('total-time');
+        const contentContainer = document.getElementById('content-container');
+        const viewTitle = document.getElementById('view-title');
+
+        // --- CORE FUNCTIONS ---
+        function init() {
+            renderView();
+            renderPlaylists();
+            
+            // Audio events
+            audio.ontimeupdate = () => {
+                const percent = (audio.currentTime / audio.duration) * 100 || 0;
+                progressBar.value = percent;
+                currTimeLabel.innerText = formatTime(audio.currentTime);
+            };
+
+            progressBar.oninput = () => {
+                const time = (progressBar.value / 100) * audio.duration;
+                audio.currentTime = time;
+            };
+
+            audio.onloadedmetadata = () => {
+                totalTimeLabel.innerText = formatTime(audio.duration);
+            };
+
+            audio.onended = () => nextTrack();
+        }
+
+        function formatTime(seconds) {
+            const min = Math.floor(seconds / 60);
+            const sec = Math.floor(seconds % 60);
+            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        }
+
+        function setView(view) {
+            currentView = view;
+            
+            // UI tab states
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('active-tab', 'text-white');
+                btn.classList.add('text-slate-400');
+            });
+            const activeNav = document.getElementById(`nav-${view}`);
+            if (activeNav) {
+                activeNav.classList.add('active-tab');
+                activeNav.classList.remove('text-slate-400');
+            }
+
+            renderView();
+        }
+
+        function renderView() {
+            contentContainer.innerHTML = '';
+            
+            if (currentView === 'songs') {
+                viewTitle.innerText = "All Songs";
+                renderSongList(songs);
+            } else if (currentView === 'albums') {
+                viewTitle.innerText = "Albums";
+                renderCardView('album');
+            } else if (currentView === 'artists') {
+                viewTitle.innerText = "Artists";
+                renderCardView('artist');
+            } else if (currentView.startsWith('playlist-')) {
+                const pid = parseInt(currentView.split('-')[1]);
+                const pl = playlists.find(p => p.id === pid);
+                viewTitle.innerText = pl.name;
+                const plSongs = songs.filter(s => pl.tracks.includes(s.id));
+                renderSongList(plSongs);
+            }
+        }
+
+        function renderSongList(list) {
+            let html = `
+                <table class="w-full text-left">
+                    <thead class="text-xs text-slate-500 uppercase border-b border-slate-800">
+                        <tr>
+                            <th class="pb-3 pl-4">#</th>
+                            <th class="pb-3">Title</th>
+                            <th class="pb-3">Album</th>
+                            <th class="pb-3 text-right pr-4">Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+            `;
+
+            list.forEach((song, idx) => {
+                html += `
+                    <tr onclick="playTrack(${songs.indexOf(song)})" class="track-row group cursor-pointer transition-colors">
+                        <td class="py-4 pl-4 text-slate-500 w-10">${idx + 1}</td>
+                        <td class="py-4 flex items-center gap-3">
+                            <div class="w-10 h-10 rounded bg-gradient-to-br ${song.color} flex-shrink-0"></div>
+                            <div>
+                                <div class="font-medium text-slate-200">${song.title}</div>
+                                <div class="text-xs text-slate-500 group-hover:text-slate-400">${song.artist}</div>
+                            </div>
+                        </td>
+                        <td class="py-4 text-slate-400">${song.album}</td>
+                        <td class="py-4 text-right pr-4 text-slate-500 font-mono">${song.duration}</td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+            contentContainer.innerHTML = html;
+        }
+
+        function renderCardView(type) {
+            const items = [...new Set(songs.map(s => s[type]))];
+            let html = `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">`;
+            
+            items.forEach(item => {
+                const song = songs.find(s => s[type] === item);
+                html += `
+                    <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 hover:bg-slate-800/50 cursor-pointer group transition-all">
+                        <div class="aspect-square bg-gradient-to-br ${song.color} rounded-lg mb-4 shadow-lg flex items-center justify-center relative">
+                             <button class="absolute bottom-2 right-2 w-10 h-10 bg-purple-500 rounded-full shadow-lg opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                             </button>
+                        </div>
+                        <div class="font-bold truncate">${item}</div>
+                        <div class="text-xs text-slate-500">${type === 'album' ? song.artist : 'Artist'}</div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            contentContainer.innerHTML = html;
+        }
+
+        function renderPlaylists() {
+            const list = document.getElementById('playlist-list');
+            list.innerHTML = '';
+            playlists.forEach(pl => {
+                const div = document.createElement('button');
+                div.className = "w-full text-left text-sm text-slate-400 hover:text-white truncate py-1 transition-colors block";
+                div.innerText = pl.name;
+                div.onclick = () => setView(`playlist-${pl.id}`);
+                list.appendChild(div);
+            });
+        }
+
+        function createPlaylist() {
+            const name = prompt("Playlist Name:");
+            if (name) {
+                playlists.push({ id: Date.now(), name: name, tracks: [] });
+                renderPlaylists();
+            }
+        }
+
+        function playTrack(index) {
+            currentTrackIndex = index;
+            const track = songs[index];
+            
+            // Update UI
+            document.getElementById('player-title').innerText = track.title;
+            document.getElementById('player-artist').innerText = track.artist;
+            const art = document.getElementById('player-art');
+            art.className = `w-14 h-14 rounded-lg vibrant-glow flex items-center justify-center overflow-hidden bg-gradient-to-br ${track.color}`;
+            art.innerHTML = '';
+
+            // Simulate loading a local file
+            // audio.src = "your-audio-file.mp3"; 
+            // Since we don't have real files, we'll simulate the state
+            isPlaying = true;
+            updatePlayIcon();
+            
+            // Mocking playback for demonstration
+            audio.currentTime = 0;
+            audio.duration = 240; // fake duration
+        }
+
+        function togglePlay() {
+            if (currentTrackIndex === -1) return;
+            isPlaying = !isPlaying;
+            updatePlayIcon();
+        }
+
+        function updatePlayIcon() {
+            if (isPlaying) {
+                playIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+            } else {
+                playIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+            }
+        }
+
+        function nextTrack() {
+            if (songs.length === 0) return;
+            let next = currentTrackIndex + 1;
+            if (next >= songs.length) next = 0;
+            playTrack(next);
+        }
+
+        function prevTrack() {
+            if (songs.length === 0) return;
+            let prev = currentTrackIndex - 1;
+            if (prev < 0) prev = songs.length - 1;
+            playTrack(prev);
+        }
+
+        function handleFileUpload(e) {
+            const files = e.target.files;
+            for(let file of files) {
+                // In a real app, we'd use a metadata library like jsmediatags
+                // For this simulation, we add it to our library
+                const newSong = {
+                    id: Date.now() + Math.random(),
+                    title: file.name.replace(/\.[^/.]+$/, ""),
+                    artist: "Local Artist",
+                    album: "Imported",
+                    duration: "3:45",
+                    color: "from-slate-500 to-slate-700"
+                };
+                songs.push(newSong);
+            }
+            renderView();
+  
